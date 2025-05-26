@@ -76,7 +76,7 @@ interface ChannelInfo {
 
 export class KickApiClient {
   private config: KickApiConfig;
-  private accessToken: string | null = null;
+  accessToken: string | null = null;
   private tokenExpiresAt: number | null = null;
 
   constructor(config: KickApiConfig) {
