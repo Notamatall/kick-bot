@@ -38,7 +38,7 @@ export class KickWebhookServer {
     });
 
     this.app.post("/webhook", (req: Request, res: Response) => {
-      console.log("🔔 Webhook received:", req.body.content);
+      console.log("🔔 Webhook received:", req.body);
       res.status(200).send("Webhook received");
     });
   }

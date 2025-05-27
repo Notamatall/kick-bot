@@ -77,7 +77,6 @@ interface ChannelInfo {
 export class KickApiClient {
   private config: KickApiConfig;
   accessToken: string | null = null;
-  private tokenExpiresAt: number | null = null;
 
   constructor(config: KickApiConfig) {
     this.config = config;
@@ -105,7 +104,6 @@ export class KickApiClient {
 
       const data = (await response.json()) as any;
 
-      // Note: Kick API might return different structure, adjust based on actual response
       if (data.access_token || data.token) {
         this.accessToken = data.access_token || data.token;
         this.tokenExpiresAt = Date.now() + (data.expires_in || 3600) * 1000;
@@ -117,120 +115,5 @@ export class KickApiClient {
       console.error("Authentication error:", error);
       throw error;
     }
-  }
-
-  /**
-   * Check if token is valid and refresh if needed
-   */
-  private async ensureValidToken(): Promise<void> {
-    if (
-      !this.accessToken ||
-      !this.tokenExpiresAt ||
-      Date.now() >= this.tokenExpiresAt
-    ) {
-      await this.authenticate();
-    }
-  }
-
-  /**
-   * Make authenticated API request
-   */
-  private async makeRequest<T>(
-    endpoint: string,
-    options: any = {}
-  ): Promise<T> {
-    await this.ensureValidToken();
-
-    const url = `${this.config.publicAPIBaseUrl}${endpoint}`;
-    const headers = {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(this.accessToken && { Authorization: `Bearer ${this.accessToken}` }),
-      ...options.headers,
-    };
-
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `API request failed: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return (await response.json()) as T;
-  }
-
-  /**
-   * Get channel information by slug
-   */
-  async getChannel(slug: string): Promise<ChannelInfo> {
-    return this.makeRequest<ChannelInfo>(`/channels?slug=${slug}`);
-  }
-
-  /**
-   * Get live streams
-   */
-  async getLiveStreams(page: number = 1, limit: number = 20): Promise<any> {
-    return this.makeRequest(`/channels/live?page=${page}&limit=${limit}`);
-  }
-
-  /**
-   * Get stream information
-   */
-  async getStreamInfo(channelSlug: string): Promise<StreamInfo | null> {
-    try {
-      const channel = await this.getChannel(channelSlug);
-      return channel.livestream;
-    } catch (error) {
-      console.error("Error fetching stream info:", error);
-      return null;
-    }
-  }
-
-  /**
-   * Search channels
-   */
-  async searchChannels(query: string, page: number = 1): Promise<any> {
-    const encodedQuery = encodeURIComponent(query);
-    return this.makeRequest(
-      `/search/channels?query=${encodedQuery}&page=${page}`
-    );
-  }
-
-  /**
-   * Get channel followers
-   */
-  async getChannelFollowers(
-    channelSlug: string,
-    page: number = 1
-  ): Promise<any> {
-    return this.makeRequest(`/channels/${channelSlug}/followers?page=${page}`);
-  }
-
-  /**
-   * Get user information
-   */
-  async getUserInfo(username: string): Promise<any> {
-    return this.makeRequest(`/users/${username}`);
-  }
-
-  /**
-   * Get categories
-   */
-  async getCategories(): Promise<any> {
-    return this.makeRequest("/categories");
-  }
-
-  /**
-   * Get streams by category
-   */
-  async getStreamsByCategory(
-    categoryId: number,
-    page: number = 1
-  ): Promise<any> {
-    return this.makeRequest(`/categories/${categoryId}/streams?page=${page}`);
   }
 }
